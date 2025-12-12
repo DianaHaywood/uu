@@ -1,0 +1,109 @@
+!include "MUI2.nsh"
+
+; 基本信息
+Name "军工项目管理软件"
+OutFile "MilitaryProjectManagement_Setup.exe"
+InstallDir "$PROGRAMFILES64\军工项目管理"
+InstallDirRegKey HKLM "Software\军工项目管理" "Install_Dir"
+
+; 界面设置
+!define MUI_ABORTWARNING
+!define MUI_ICON "resources\installer.ico"
+!define MUI_UNICON "resources\uninstaller.ico"
+
+; 页面
+!insertmacro MUI_PAGE_WELCOME
+!insertmacro MUI_PAGE_LICENSE "LICENSE.txt"
+!insertmacro MUI_PAGE_COMPONENTS
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
+
+!insertmacro MUI_UNPAGE_WELCOME
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_UNPAGE_FINISH
+
+!insertmacro MUI_LANGUAGE "SimpChinese"
+
+; 安装部分
+Section "主程序" SecMain
+  SectionIn RO
+  
+  SetOutPath "$INSTDIR"
+  
+  ; 复制所有文件
+  File /r "dist\win-unpacked\*.*"
+  
+  ; 创建开始菜单快捷方式
+  CreateDirectory "$SMPROGRAMS\军工项目管理"
+  CreateShortcut "$SMPROGRAMS\军工项目管理\军工项目管理.lnk" "$INSTDIR\军工项目管理.exe"
+  CreateShortcut "$SMPROGRAMS\军工项目管理\卸载.lnk" "$INSTDIR\Uninstall.exe"
+  
+  ; 创建桌面快捷方式
+  CreateShortcut "$DESKTOP\军工项目管理.lnk" "$INSTDIR\军工项目管理.exe"
+  
+  ; 写入注册表信息
+  WriteRegStr HKLM "Software\军工项目管理" "Install_Dir" "$INSTDIR"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\军工项目管理" \
+                   "DisplayName" "军工项目管理软件"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\军工项目管理" \
+                   "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\军工项目管理" \
+                     "NoModify" 1
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\军工项目管理" \
+                     "NoRepair" 1
+  
+  ; 创建卸载程序
+  WriteUninstaller "$INSTDIR\Uninstall.exe"
+SectionEnd
+
+Section "自动启动" SecAutoStart
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" \
+                   "MilitaryProjectManagement" "$INSTDIR\军工项目管理.exe"
+SectionEnd
+
+Section "文件关联" SecFileAssoc
+  WriteRegStr HKCR ".mproj" "" "MilitaryProject.Project"
+  WriteRegStr HKCR "MilitaryProject.Project" "" "军工项目文件"
+  WriteRegStr HKCR "MilitaryProject.Project\DefaultIcon" "" "$INSTDIR\军工项目管理.exe,0"
+  WriteRegStr HKCR "MilitaryProject.Project\shell\open\command" "" \
+                   '"$INSTDIR\军工项目管理.exe" "%1"'
+SectionEnd
+
+; 卸载部分
+Section "Uninstall"
+  ; 删除注册表项
+  DeleteRegKey HKLM "Software\军工项目管理"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\军工项目管理"
+  DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "MilitaryProjectManagement"
+  
+  ; 删除文件关联
+  DeleteRegKey HKCR ".mproj"
+  DeleteRegKey HKCR "MilitaryProject.Project"
+  
+  ; 删除开始菜单快捷方式
+  RMDir /r "$SMPROGRAMS\军工项目管理"
+  
+  ; 删除桌面快捷方式
+  Delete "$DESKTOP\军工项目管理.lnk"
+  
+  ; 删除安装目录
+  RMDir /r "$INSTDIR"
+  
+  ; 删除用户数据（可选，提示用户确认）
+  MessageBox MB_YESNO|MB_ICONQUESTION "是否删除所有用户数据和设置？" IDNO NoDeleteData
+    RMDir /r "$LOCALAPPDATA\军工项目管理"
+  NoDeleteData:
+SectionEnd
+
+; 安装类型
+LangString DESC_SecMain ${LANG_SIMPCHINESE} "安装主程序文件"
+LangString DESC_SecAutoStart ${LANG_SIMPCHINESE} "开机自动启动程序"
+LangString DESC_SecFileAssoc ${LANG_SIMPCHINESE} "关联项目文件类型"
+
+!insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecMain} $(DESC_SecMain)
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecAutoStart} $(DESC_SecAutoStart)
+  !insertmacro MUI_DESCRIPTION_TEXT ${SecFileAssoc} $(DESC_SecFileAssoc)
+!insertmacro MUI_FUNCTION_DESCRIPTION_END
